@@ -13,3 +13,4 @@ if __name__ == '__main__':
         init_app(set_backends=True, routes=False, attach_request_handlers=False)
 
     execute_from_command_line(sys.argv)
+ 
