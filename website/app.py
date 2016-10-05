@@ -129,9 +129,12 @@ def init_app(settings_module='website.settings', set_backends=True, routes=True,
 
     if app.debug:
         logger.info("Sentry disabled; Flask's debug mode enabled")
-        # if debug, also load flask debug toolbar
-        app.config['SECRET_KEY'] = settings.SECRET_KEY
-        DebugToolbarExtension(app)
+        if routes:
+            # if debug, also load flask debug toolbar
+            # XXX - hacky, appears that for django-rest, routes is specified
+            # flask-debugtoolbar conflicts with that, so used this if
+            app.config['SECRET_KEY'] = settings.SECRET_KEY
+            DebugToolbarExtension(app)
     else:
         sentry.init_app(app)
         logger.info("Sentry enabled; Flask's debug mode disabled")
