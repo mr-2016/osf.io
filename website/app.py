@@ -33,6 +33,9 @@ from website.mails import listeners  # noqa
 from website.notifications import listeners  # noqa
 from api.caching import listeners  # noqa
 
+# Import Flask-debug Toolbar
+from flask_debugtoolbar import DebugToolbarExtension
+
 
 def init_addons(settings, routes=True):
     """Initialize each addon in settings.ADDONS_REQUESTED.
@@ -126,6 +129,9 @@ def init_app(settings_module='website.settings', set_backends=True, routes=True,
 
     if app.debug:
         logger.info("Sentry disabled; Flask's debug mode enabled")
+        # if debug, also load flask debug toolbar
+        app.config['SECRET_KEY'] = settings.SECRET_KEY
+        DebugToolbarExtension(app)
     else:
         sentry.init_app(app)
         logger.info("Sentry enabled; Flask's debug mode disabled")
