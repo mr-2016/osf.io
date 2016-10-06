@@ -254,7 +254,7 @@
     <div class="col-xs-12">
         <div class="pp-notice pp-warning m-b-md p-md clearfix">
             This project used to represent a preprint, but the primary preprint file has been moved or deleted. <a href="/preprints/submit/" class="btn btn-default btn-sm m-r-xs pull-right">Create a new preprint</a>
-        </div> 
+        </div>
     </div>
 </div>
 % endif
@@ -439,6 +439,9 @@
         <div class="panel-body">
             % if node['children']:
                 <div id="containment">
+                    <!-- XXX - Madhu - uncomment to view live! Not compatible with new code
+                    since it uses the same ids for triggering JS events -->
+                    <!--
                     <div mod-meta='{
                         "tpl": "util/render_nodes.mako",
                         "uri": "${node["api_url"]}get_readable_descendants/",
@@ -448,6 +451,10 @@
                           "pluralized_node_type": "components"
                         }
                       }'></div>
+                      -->
+                      <div id="componentsParent">
+                      <!--mithriljs see project-dashboard-page.js for details-->
+                      </div>
                 </div><!-- end containment -->
             % else:
               <p>No components have been added to this ${node['node_type']}.</p>
@@ -455,7 +462,6 @@
         </div><!-- end addon-widget-body -->
     </div><!-- end components -->
 %endif
-
 </%def>
 
 <%def name="stylesheets()">

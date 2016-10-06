@@ -16,6 +16,7 @@ var $osf = require('js/osfHelpers');
 var LogFeed = require('js/components/logFeed');
 var pointers = require('js/pointers');
 var Comment = require('js/comment'); //jshint ignore:line
+var NodeActions = require('js/project');
 var NodeControl = require('js/nodeControl');
 var CitationList = require('js/citationList');
 var CitationWidget = require('js/citationWidget');
@@ -102,6 +103,104 @@ var institutionLogos = {
 
 $(document).ready(function () {
 
+    var node_id = window.contextVars.node.id;
+    // note below syntax in query allows multiple parameters of same param
+    // XXX - nesting here looks a bit weird, might want to split up into declared objs?
+    var nodeComponentURL =  $osf.apiV2Url('/nodes/' + node_id + '/children/',
+                                           {query:
+                                               {
+                                                   embed: ['logs','contributors']
+                                               }
+                                           });
+    console.log('using API url - ' + nodeComponentURL);
+
+    var componentsNodesInParents = {
+        // contains components for "Recent Activity"
+        body_hide: function(nodeData){
+            console.log(nodeData.embeds.logs.data);
+
+            return m('div#body-'+nodeData.id+'.body.hide', [
+                m('hr'),
+                m.trust('Recent Activity'),
+                m('div#logFeed-'+nodeData.id, [
+                    m('div.spinner-loading-wrapper', [
+                        m('div.logo-spin.logo-lg'),
+                        m('p.m-t-sm.fg-load-message', 'Loading logs...')
+                    ]),
+                ])
+
+            ])
+        },
+        // XXX - below get_name/get_id access same information, should be refactored into ONE thing and probably less deep in JSON (multiple calls maybe instead of embeds?)
+        get_user_name: function(nodeData) {
+        //  XXX-#4-email - currently only retrieves FIRST suffix name
+        // retrieves suffix of contributors (deeply nested in return object)
+            return nodeData.embeds.contributors.data[0].embeds.users.data.attributes.suffix;
+        },
+        get_user_id: function(nodeData) {
+        //  XXX-#4-email - currently only retrieves FIRST id
+            // console.log(nodeData.embeds.contributors.data[0].embeds.users.data.id);
+            return nodeData.embeds.contributors.data[0].embeds.users.data.id;
+        },
+        group_heading: function(nodeData){
+            // XXX - positioning different, but has to avoid a href, unsure what to do here
+            return [m('a', {href: '/'+nodeData.id},
+                        [m('h4.list-group-item-heading',nodeData.attributes.title)]),
+                    m('div.pull-right',
+                        m('i#icon-'+nodeData.id+'.pointer.fa.fa-angle-down',
+                          {
+                              onclick: function(){
+                                  NodeActions.openCloseNode(nodeData.id)
+                              }
+                          })
+                      )
+                ];
+        },
+        controller: function(args){
+            console.log(args);
+            this.nodes = args.data
+        },
+        view: function(ctrl, args){
+            return m('ul.list-group.m-md.sortable.ui-sortable',[
+                // Generates Component on a component-by-component basis
+                m('span#components', ctrl.nodes.map(function(nodeData){
+                    // adds an 's', maybe a pluralizer in codebase somewhere? no time
+                    var pluralize_contribution = nodeData.embeds.logs.links.meta.total > 1 ? 's' : '';
+                    return m('div.render-node',[
+                        m('li.project.list-group-item.list-group-item-node.cite-container',[
+                            // Header Section - see self.group_heading() for details
+                            componentsNodesInParents.group_heading(nodeData),
+                            m('div.project-authors', [
+                                // Name/Suffix Section - see self.get_user_name() for detials
+                                // see get_user_id() for details on how href is generated
+                                m('a.overflow',
+                                  {href: componentsNodesInParents.get_user_id(nodeData)},
+                                  componentsNodesInParents.get_user_name(nodeData))
+                            ]),
+                            m('span.text-muted', nodeData.embeds.logs.links.meta.total + ' contribution' + pluralize_contribution),
+                            // See More Section -- see self.body_hide() for details
+                            componentsNodesInParents.body_hide(nodeData),  // see self.body_hide
+                            ]
+                        )
+                    ])
+                })
+                )
+                // ICONS - LOCK OR NOT LOGIC (Private icon lines 14 - 36 in render_node.mako )
+                // PROJECT status (getIcon line ~37 in render_node.mako)
+                // log feed (line ~105 in render_node.mako)
+            ]);
+        },
+    };
+
+    $osf.ajaxJSON('GET', nodeComponentURL, {fields: {isCors:true}})
+        .done(function(data){
+            console.log(data);
+            var componentsNodesInParentsWrapper = m.component(componentsNodesInParents, data);
+            m.mount(document.getElementById('componentsParent'), componentsNodesInParentsWrapper);
+        });
+
+
+
     var AddComponentButton = m.component(AddProject, {
         buttonTemplate: m('.btn.btn-sm.btn-default[data-toggle="modal"][data-target="#addSubComponent"]', {onclick: function() {
             $osf.trackClick('project-dashboard', 'add-component', 'open-add-project-modal');
@@ -120,6 +219,7 @@ $(document).ready(function () {
         contributors: window.contextVars.node.contributors,
         currentUserCanEdit: window.contextVars.currentUser.canEdit
     });
+
     var newComponentElem = document.getElementById('newComponent');
     if (newComponentElem) {
         m.mount(newComponentElem, AddComponentButton);
